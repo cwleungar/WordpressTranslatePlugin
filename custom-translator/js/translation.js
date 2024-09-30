@@ -22,7 +22,7 @@ url.pathname = '/' + languageCode + url.pathname.substring(3); // Remove the old
 function applyTranslations() {
   replaceLanguageSwitch("language-switcher");
   // Fetch translations for the current language
-  fetch(`/wp-content/plugins/custom-tranlsator/translation_file/${languageCode}.json`)
+  fetch(`/wp-content/plugins/custom-translator/translation_file/${languageCode}.json`)
     .then(response => response.json())
     .then(translations => {
       const hreflangLink = document.createElement('link');
