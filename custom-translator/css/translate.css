@@ -1,0 +1,63 @@
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-toggle {
+    background-color: #007bff; /* Bootstrap primary color */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    text-align: center;
+    transition: background-color 0.3s, transform 0.2s;
+    width: 150px; /* Fixed width */
+    text-transform: uppercase; /* Uppercase text for uniformity */
+}
+
+.dropdown-toggle:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+.dropdown-menu {
+    display: none; /* Hidden by default */
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ced4da; /* Bootstrap border color */
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    margin-top: 5px;
+    width: 150px; /* Fixed width for consistency */
+}
+
+.dropdown-menu.show {
+    display: block; /* Show dropdown when active */
+}
+
+.dropdown-item {
+    padding: 10px 15px;
+    color: #212529; /* Bootstrap text color */
+    text-decoration: none;
+    display: block;
+    text-align: center; /* Center-align text */
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa; /* Light gray on hover */
+}
+
+.dropdown-item:focus {
+    outline: none; /* Remove outline on focus */
+    background-color: #e2e6ea; /* Slightly darker gray on focus */
+}
+
+@media (max-width: 768px) {
+    .dropdown-toggle, .dropdown-item {
+        width: 100%; /* Full width on smaller screens */
+    }
+}
