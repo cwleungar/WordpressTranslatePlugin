@@ -3,7 +3,7 @@
 Plugin Name: Custom Translator
 Description: A simple custom page plugin that proxies /en/*, /zhHK/*, and /jp/* requests.
 Version: 1.0
-Author: Your Name
+Author: Sam Leung (github: cwleungar)
 */
 
 function custom_translator_page() {
