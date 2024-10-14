@@ -5,9 +5,8 @@ const languageOptions = [
 ];
 
 const hrefLangCode = {
-  "en": "en",
+  "en": ["en","x-default"],
   "zhHK": ["zh-HK", "zh-TW", "zh-Hant"],
-  "x-default": "en",
   "jp":"jp"
 };
 
@@ -23,9 +22,10 @@ if (!languageOptions.some(option => option[1] === languageCode)) {
 // Update the URL to include the language code in the path
 const url = new URL(window.location.href);
 url.pathname = '/' + languageCode + url.pathname.substring(3); // Remove the old language code and set the new one
-
+undefinedTranslation={};
 // Function to load and apply translations
 function applyTranslations() {
+	console.log("started Translation");
   replaceLanguageSwitch("language-switcher");
   
   const canonicalUrl = new URL(window.location.href);
@@ -50,7 +50,7 @@ function applyTranslations() {
       const alternateLink = document.createElement('link');
       alternateLink.rel = 'alternate';
       alternateLink.hreflang = code;
-      alternateLink.href = `/${lang}/`;
+      alternateLink.href = lang!="en"?`/${lang}/`:"/";
       document.head.appendChild(alternateLink);
     });
   });
@@ -59,11 +59,6 @@ function applyTranslations() {
   fetch(`/wp-content/plugins/custom-translator/translation_file/${languageCode}.json`)
     .then(response => response.json())
     .then(translations => {
-      const hreflangLink = document.createElement('link');
-      hreflangLink.rel = 'alternate';
-      hreflangLink.hreflang = languageCode;
-      hreflangLink.href = url.toString();
-      document.head.appendChild(hreflangLink);
       
       // Translate all text elements on the page
       document.body.childNodes.forEach(node => {
@@ -71,8 +66,13 @@ function applyTranslations() {
       });
 	  
 
-
-      document.title = translations[document.title] !== undefined ? translations[document.title] : document.title;
+	  if(translations[document.title] !== undefined){
+		  document.title =translations[document.title]
+	  }else{
+		  undefinedTranslation[document.title]=document.title;
+	  }
+		 
+      
 
       let metaDescription = document.querySelector('meta[name="description"]');
       if (!metaDescription) {
@@ -80,8 +80,12 @@ function applyTranslations() {
         metaDescription.name = 'description';
         document.head.appendChild(metaDescription);
       }
-      metaDescription.content = translations[metaDescription.content] !== undefined ? translations[metaDescription.content] : metaDescription.content;
-
+	  if(translations[metaDescription.content] !== undefined){
+		  metaDescription.content=translations[metaDescription.content];
+	  }else{
+		  undefinedTranslation[metaDescription.content]=metaDescription.content;
+	  }
+	  console.log("undefined Translation",undefinedTranslation);
 	  
       document.body.classList.add('loaded');
     })
@@ -121,6 +125,8 @@ function translateNode(node, translations) {
     } else {
       node.value = translatedText;
     }
+  }else{
+	  undefinedTranslation[originalText]=originalText;
   }
 }
 

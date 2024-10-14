@@ -20,14 +20,27 @@ function custom_translator_page() {
 
     $server_host = $_SERVER['HTTP_HOST']; // Get the server host
     $target_url = "https://$server_host/$path"; 
-	$target_url_o = $target_url; 
+    $target_url_o = $target_url; 
     // Initialize redirect tracking
     $max_redirects = 10; // Set a maximum number of redirects
     $redirect_count = 0; // Initialize redirect counter
 
+    // Retrieve cookies from the client
+    $cookies = array_map(function($name) {
+        return "$name=" . urlencode($_COOKIE[$name]);
+    }, array_keys($_COOKIE));
+
+    // Prepare the headers including cookies
+    $headers = array(
+        'Cookie' => implode('; ', $cookies),
+    );
+
     while ($redirect_count < $max_redirects) {
-        // Fetch the content from the target URL without following redirects
-        $response = wp_remote_get($target_url, array('redirection' => 0));
+        // Fetch the content from the target URL without following redirects, including cookies
+        $response = wp_remote_get($target_url, array(
+            'redirection' => 0,
+            'headers' => $headers,
+        ));
 
         // Check for errors
         if (is_wp_error($response)) {
@@ -43,42 +56,35 @@ function custom_translator_page() {
             if ($redirect_url) {
                 // Log or display the redirect
                 echo '<p>Redirecting to: ' . esc_html($redirect_url) . '</p>';
-                
                 // Update the target URL for the next iteration
                 $target_url = $redirect_url;
                 $redirect_count++; // Increment the redirect counter
                 continue; // Fetch the new URL
             }
         }
-		
 
         // If no redirect, display the content
         $body = wp_remote_retrieve_body($response);
-         // Display the content from the target URL
         break; // Exit the loop if no redirects
     }
 
- 	if ($target_url_o!=$target_url) {
-                 // Extract the new path from the redirect URL
-                 $redirect_parts = parse_url($target_url);
-                 $new_path = $redirect_parts['path'];				
-                 // Construct the new URL with the language code
-                 $new_redirect_url = "/$lang_code$new_path";
- 				echo '<p>final to: ' . esc_html($new_redirect_url) . '</p>';
-                 // Send a 301 redirect to the new URL
-                 wp_redirect($new_redirect_url, 301);
- 				exit;
- 		}
-	echo $body;
-    // Get the server's IP address
+    if ($target_url_o !== $target_url) {
+        // Extract the new path from the redirect URL
+        $redirect_parts = parse_url($target_url);
+        $new_path = $redirect_parts['path'];                
+        // Construct the new URL with the language code
+        $new_redirect_url = "/$lang_code$new_path";
+        echo '<p>final to: ' . esc_html($new_redirect_url) . '</p>';
+        // Send a 301 redirect to the new URL
+        wp_redirect($new_redirect_url, 301);
+        exit;
+    }
 
-    ?>
-    <?php
+    echo $body;
 
     // Return the buffered content
     return ob_get_clean();
 }
-
 // Proxy specified language requests to the custom page
 function custom_translator_proxy() {
     // Define the allowed language codes
