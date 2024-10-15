@@ -55,7 +55,7 @@ function custom_translator_page() {
             $redirect_url = wp_remote_retrieve_header($response, 'Location');
             if ($redirect_url) {
                 // Log or display the redirect
-                echo '<p>Redirecting to: ' . esc_html($redirect_url) . '</p>';
+                //echo '<p>Redirecting to: ' . esc_html($redirect_url) . '</p>';
                 // Update the target URL for the next iteration
                 $target_url = $redirect_url;
                 $redirect_count++; // Increment the redirect counter
@@ -74,10 +74,13 @@ function custom_translator_page() {
         $new_path = $redirect_parts['path'];                
         // Construct the new URL with the language code
         $new_redirect_url = "/$lang_code$new_path";
-        echo '<p>final to: ' . esc_html($new_redirect_url) . '</p>';
-        // Send a 301 redirect to the new URL
-        wp_redirect($new_redirect_url, 301);
-        exit;
+
+        // Avoid redirecting to the same URL
+        if ($new_redirect_url !== $_SERVER['REQUEST_URI']) {
+            echo '<p>Final redirect to: ' . esc_html($new_redirect_url) . '</p>';
+            wp_redirect($new_redirect_url, 301);
+            exit;
+        }
     }
 
     echo $body;
@@ -85,10 +88,11 @@ function custom_translator_page() {
     // Return the buffered content
     return ob_get_clean();
 }
+
 // Proxy specified language requests to the custom page
 function custom_translator_proxy() {
     // Define the allowed language codes
-    $lang_codes = ['en', 'zhHK', 'jp'];
+    $lang_codes = ['zhHK', 'jp'];
 
     // Create a regex pattern to match the language codes
     $pattern = '/^\/(' . implode('|', $lang_codes) . ')\/(.*)$/';
@@ -145,3 +149,4 @@ function custom_language_switcher() {
 
 // Register the shortcode
 add_shortcode('language_switcher', 'custom_language_switcher');
+

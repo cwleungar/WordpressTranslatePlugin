@@ -20,8 +20,7 @@ if (!languageOptions.some(option => option[1] === languageCode)) {
 }
 
 // Update the URL to include the language code in the path
-const url = new URL(window.location.href);
-url.pathname = '/' + languageCode + url.pathname.substring(3); // Remove the old language code and set the new one
+// Remove the old language code and set the new one
 undefinedTranslation={};
 // Function to load and apply translations
 function applyTranslations() {
@@ -158,12 +157,25 @@ function replaceLanguageSwitch(sclassName) {
     }
 
     const dropdownMenu = document.querySelectorAll('.LanguageDropdown-menu');
+    const currentPath = window.location.pathname;
+
+    // Remove the current language code from the path
+    const pathSegments = currentPath.split('/');
+    pathSegments[1] = ''; // Clear the language code segment
+
     for (let i = 0; i < dropdownMenu.length; i++) {
       languageOptions.forEach(([name, langCode]) => {
         const listItem = document.createElement('li');
         const link = document.createElement('a');
         link.classList.add('dropdown-item');
-        link.href = `/${langCode}/`; // Use path-based URLs
+		link.classList.add('language-switch-item');
+        // Construct the URL based on the current path
+        if (langCode === 'en') {
+          link.href = `${pathSegments.slice(1).join('/')}`; // For English, no language code
+        } else {
+          link.href = `/${langCode}/${pathSegments.slice(2).join('/')}`; // Add language code
+        }
+
         link.textContent = name;
         listItem.appendChild(link);
         dropdownMenu[i].appendChild(listItem);
@@ -190,3 +202,44 @@ function replaceLanguageSwitch(sclassName) {
     });
   }
 }
+
+
+function updateLinksToLanguageVersion() {
+  const currentHost = window.location.host;
+  const newLangCode = languageCode === 'en' ? '' : languageCode; // Prepare new language code
+  const links = document.querySelectorAll('a');
+
+  links.forEach(link => {
+    let linkUrl;
+
+    // Try to create a URL object from the link's href
+    try {
+      // If the link href is relative, create a full URL
+      linkUrl = new URL(link.href, window.location.origin);
+    } catch (error) {
+      console.warn(`Invalid URL: ${link.href}`); // Log invalid URLs
+      return; // Skip to the next link
+    }
+
+    // Only update links that point to the current host
+    const linkHost = linkUrl.host;
+
+    // Check if the link is from the current host and not part of the language switcher
+    if (linkHost === currentHost && !link.classList.contains('language-switch-item')) {
+      // Check if the current pathname includes the new language code
+      if (!linkUrl.pathname.startsWith(`/${newLangCode}`) && newLangCode) {
+        // Update the pathname to include the new language code
+        linkUrl.pathname = `/${newLangCode}${linkUrl.pathname}`;
+      }
+
+      // Update the link href if it has changed
+      if (link.href !== linkUrl.href) {
+        link.href = linkUrl.href; // Update to the new URL
+      }
+    }
+  });
+}
+
+// Call the function as needed
+setInterval(updateLinksToLanguageVersion, 1000); // 1000 milliseconds = 1 second
+
