@@ -101,31 +101,33 @@ function translateNode(node, translations) {
     return;
   }
 
-  let originalText = node.textContent.split(';')[0].trim();
-  if (node.nodeName === 'INPUT') {
-    originalText = node.value;
-  }
+  let originalText = node.nodeType === Node.TEXT_NODE ? node.textContent.split(';')[0].trim() : node.value;
 
   if (translations[originalText] !== undefined) {
     let translatedText = translations[originalText];
     const variables = originalText.match(/\$\d+/g);
     if (variables) {
-      const temp = node.textContent.split(';');
+      const temp = originalText.split(';');
       variables.forEach((variable, index) => {
-        const value = temp[index + 1].trim();
-        translatedText = translatedText.replace(variable, value);
+        const value = temp[index + 1]?.trim();
+        if (value) {
+          translatedText = translatedText.replace(variable, value);
+        }
       });
     }
-    
+
+    // Replace newlines with <br> tags to preserve spacing
+    translatedText = translatedText.replace(/\r?\n/g, '<br>');
+
     if (node.nodeName !== 'INPUT') {
       const translatedNode = document.createElement('span');
-      translatedNode.textContent = translatedText;
+      translatedNode.innerHTML = translatedText; // Use innerHTML to preserve <br> tags
       node.parentNode.replaceChild(translatedNode, node);
     } else {
-      node.value = translatedText;
+      node.value = translatedText; // Inputs don't need <br> replacements
     }
-  }else{
-	  undefinedTranslation[originalText]=originalText;
+  } else {
+    undefinedTranslation[originalText] = originalText;
   }
 }
 
