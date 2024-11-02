@@ -92,7 +92,7 @@ function custom_translator_page() {
 // Proxy specified language requests to the custom page
 function custom_translator_proxy() {
     // Define the allowed language codes
-    $lang_codes = ['zhHK', 'jp'];
+    $lang_codes = ['zh', 'jp'];
 
     // Create a regex pattern to match the language codes
     $pattern = '/^\/(' . implode('|', $lang_codes) . ')\/(.*)$/';
@@ -124,22 +124,47 @@ function custom_language_switcher() {
     // Define available languages
     $languages = [
         'en' => 'English',
-        'zhHK' => '繁體中文',
+        'zh' => '繁體中文',
         'jp' => '日本語'
     ];
 
-    global $wp; // Ensure we have access to the global $wp variable
+    global $wp; // Access the global $wp variable
 
     // Start the switcher output
     $output = '<div class="language-switcher">
                    <button class="dropdown-toggle">Select Language</button>
                    <div class="dropdown-menu">';
 
+    // Get the current URL without query args
+    $current_url = home_url(add_query_arg([], $wp->request));
+    
+    // Determine the current language code from the URL
+    $current_lang_code = '';
     foreach ($languages as $code => $name) {
+        if (strpos($current_url, '/' . $code . '/') !== false) {
+            $current_lang_code = $code;
+            break;
+        }
+    }
+
+    // Get the path after the domain
+    $path = parse_url($current_url, PHP_URL_PATH);
+    
+    foreach ($languages as $code => $name) {
+        if ($code === 'en') {
+            // For English, link to the base path without language code
+            $lang_url = preg_replace('/\/(zh|jp)(\/|$)/', '', $current_url);
+        } else {
+            // For other languages, prepend the language code to the path
+            if ($current_lang_code === $code) {
+                // Skip the current language
+                continue;
+            }
+            $lang_url = home_url('/' . $code . $path);
+        }
+
         // Create the switcher links
-        $current_url = home_url(add_query_arg([], $wp->request)); // Get the current URL without query args
-        $lang_url = str_replace('/' . $code . '/', '/', $current_url); // Remove the current language code
-        $output .= '<a href="' . esc_url($lang_url . '/' . $code) . '">' . esc_html($name) . '</a>';
+        $output .= '<a href="' . esc_url(rtrim($lang_url, '/') . '/') . '">' . esc_html($name) . '</a>';
     }
 
     $output .= '</div></div>';
@@ -150,3 +175,109 @@ function custom_language_switcher() {
 // Register the shortcode
 add_shortcode('language_switcher', 'custom_language_switcher');
 
+
+add_action('admin_menu', 'my_plugin_menu');
+
+function my_plugin_menu() {
+    add_menu_page(
+        'Translation Settings',
+        'Translation Settings',
+        'manage_options',
+        'translation-settings',
+        'my_plugin_translation_settings_page',
+        'dashicons-translation'
+    );
+
+    // Add submenu pages for each JSON file
+    $files = glob(plugin_dir_path(__FILE__) . 'translation_file/*.json');
+    foreach ($files as $file) {
+        $filename = basename($file);
+        add_submenu_page(
+            'translation-settings',
+            ucfirst(str_replace('.json', '', $filename)),
+            ucfirst(str_replace('.json', '', $filename)),
+            'edit_posts',
+            'translation-settings-' . $filename,
+            function() use ($file) {
+                my_plugin_translation_file_page($file);
+            }
+        );
+    }
+}
+
+function my_plugin_translation_file_page($file_path) {
+    // Read the JSON file
+    $json_data = file_get_contents($file_path);
+    $data = json_decode($json_data, true) ?: [];
+
+    // Handle form submission
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $data = $_POST['data'] ?? [];
+        $value_data = $_POST['value'] ?? [];
+        
+        // Prepare the data for saving
+        $new_data = [];
+        foreach ($data as $key) {
+            if (!empty($key)) {
+                $new_data[$key] = $value_data[$key] ?? ''; // Link keys to their values
+            }
+        }
+
+        // Write updated data back to the JSON file
+        if (file_put_contents($file_path, json_encode($new_data, JSON_PRETTY_PRINT)) === false) {
+            echo '<div class="error"><p>Error saving settings. Please check file permissions.</p></div>';
+        } else {
+            echo '<script>alert("Settings saved successfully."); setTimeout(function() { window.location.reload(); }, 500);</script>';
+			
+        }
+    }
+
+    // Display the form
+    ?>
+    <h2><?php echo esc_html(ucfirst(basename($file_path, '.json'))); ?></h2>
+    <form method="post" id="translation-form">
+        <table class="form-table" id="translation-table">
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($data as $key => $value): ?>
+                <tr>
+                    <td><input readonly type="text" name="data[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($key); ?>" /></td>
+                    <td><input type="text" name="value[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" /></td>
+<!--                   <td><button type="button" class="remove-row button">Remove</button></td>  -->
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+<!--          <button type="button" id="add-row" class="button">Add Key-Value Pair</button>   -->
+        <input type="submit" value="Save Changes" class="button button-primary" />
+    </form>
+
+    <script>
+//         document.getElementById('add-row').addEventListener('click', function() {
+//             var table = document.getElementById('translation-table').getElementsByTagName('tbody')[0];
+//             var newRow = table.insertRow();
+//             var cell1 = newRow.insertCell(0);
+//             var cell2 = newRow.insertCell(1);
+//             var cell3 = newRow.insertCell(2);
+            
+//             // Create input fields for user-defined keys
+//             cell1.innerHTML = '<input type="text" name="data[new_key]" placeholder="Enter key" value="" />';
+//             cell2.innerHTML = '<input type="text" name="value[new_key]" placeholder="Enter value" value="" />';
+//             cell3.innerHTML = '<button type="button" class="remove-row button">Remove</button>';
+//         });
+
+//         document.getElementById('translation-table').addEventListener('click', function(e) {
+//             if (e.target.classList.contains('remove-row')) {
+//                 var row = e.target.closest('tr');
+//                 row.parentNode.removeChild(row);
+//             }
+//         });
+    </script>
+    <?php
+}

@@ -1,13 +1,13 @@
 const languageOptions = [
-  ['🇭🇰 中文', 'zhHK'],
-  ['🇬🇧 English', 'en'],
-  ['🇯🇵 日本語', 'jp']
+  ['🇭🇰中文', 'zh'],
+  ['🇬🇧English', 'en'],
+  ['🇯🇵日本語', 'jp']
 ];
 
 const hrefLangCode = {
-  "en": ["en","x-default"],
-  "zhHK": ["zh-HK", "zh-TW", "zh-Hant"],
-  "jp":"jp"
+  "en": ["en", "x-default"],
+  "zh": ["zh-HK", "zh-TW", "zh-Hant"],
+  "jp": "jp"
 };
 
 // Get the current URL and extract the language code
@@ -21,27 +21,27 @@ if (!languageOptions.some(option => option[1] === languageCode)) {
 
 // Update the URL to include the language code in the path
 // Remove the old language code and set the new one
-undefinedTranslation={};
+undefinedTranslation = {};
 // Function to load and apply translations
 function applyTranslations() {
-	console.log("started Translation");
+  console.log("started Translation");
   replaceLanguageSwitch("language-switcher");
-  
+
   const canonicalUrl = new URL(window.location.href);
   const pathSegments = canonicalUrl.pathname.split('/');
-  
+
   // Remove the language code segment
   if (pathSegments.length > 1) {
     pathSegments[1] = ''; // Clear the language code
   }
-  
+
   canonicalUrl.pathname = pathSegments.join('/').replace(/\/{2,}/g, '/'); // Clean up any double slashes
 
   const canonicalLink = document.createElement('link');
   canonicalLink.rel = 'canonical';
   canonicalLink.href = canonicalUrl.toString();
   document.head.appendChild(canonicalLink);
-  
+
   // Create alternate links based on hrefLangCode
   Object.entries(hrefLangCode).forEach(([lang, codes]) => {
     const langCodes = Array.isArray(codes) ? codes : [codes]; // Ensure it's an array
@@ -49,7 +49,7 @@ function applyTranslations() {
       const alternateLink = document.createElement('link');
       alternateLink.rel = 'alternate';
       alternateLink.hreflang = code;
-      alternateLink.href = lang!="en"?`/${lang}/`:"/";
+      alternateLink.href = lang != "en" ? `/${lang}/` : "/";
       document.head.appendChild(alternateLink);
     });
   });
@@ -58,20 +58,20 @@ function applyTranslations() {
   fetch(`/wp-content/plugins/custom-translator/translation_file/${languageCode}.json`)
     .then(response => response.json())
     .then(translations => {
-      
+
       // Translate all text elements on the page
       document.body.childNodes.forEach(node => {
         translateNode(node, translations);
       });
-	  
 
-	  if(translations[document.title] !== undefined){
-		  document.title =translations[document.title]
-	  }else{
-		  undefinedTranslation[document.title]=document.title;
-	  }
-		 
-      
+
+      if (translations[document.title] !== undefined) {
+        document.title = translations[document.title]
+      } else {
+        undefinedTranslation[document.title] = document.title;
+      }
+
+
 
       let metaDescription = document.querySelector('meta[name="description"]');
       if (!metaDescription) {
@@ -79,19 +79,20 @@ function applyTranslations() {
         metaDescription.name = 'description';
         document.head.appendChild(metaDescription);
       }
-	  if(translations[metaDescription.content] !== undefined){
-		  metaDescription.content=translations[metaDescription.content];
-	  }else{
-		  undefinedTranslation[metaDescription.content]=metaDescription.content;
-	  }
-	  console.log("undefined Translation",undefinedTranslation);
-	  
+      if (translations[metaDescription.content] !== undefined) {
+        metaDescription.content = translations[metaDescription.content];
+      } else {
+        undefinedTranslation[metaDescription.content] = metaDescription.content;
+      }
+      console.log("undefined Translation", undefinedTranslation);
+
       document.body.classList.add('loaded');
     })
     .catch(error => {
       console.error('Error loading translation file:', error);
     });
 }
+
 
 function translateNode(node, translations) {
   if (node.nodeType !== Node.TEXT_NODE && node.nodeName !== 'INPUT') {
@@ -106,6 +107,7 @@ function translateNode(node, translations) {
   if (translations[originalText] !== undefined) {
     let translatedText = translations[originalText];
     const variables = originalText.match(/\$\d+/g);
+
     if (variables) {
       const temp = originalText.split(';');
       variables.forEach((variable, index) => {
@@ -116,15 +118,13 @@ function translateNode(node, translations) {
       });
     }
 
-    // Replace newlines with <br> tags to preserve spacing
-    translatedText = translatedText.replace(/\r?\n/g, '<br>');
+    // Replace newlines with a space or another preferred character
+    translatedText = translatedText.replace(/\r?\n/g, ' ');
 
     if (node.nodeName !== 'INPUT') {
-      const translatedNode = document.createElement('span');
-      translatedNode.innerHTML = translatedText; // Use innerHTML to preserve <br> tags
-      node.parentNode.replaceChild(translatedNode, node);
+      node.textContent = translatedText; // Update text node directly
     } else {
-      node.value = translatedText; // Inputs don't need <br> replacements
+      node.value = translatedText; // Update input value directly
     }
   } else {
     undefinedTranslation[originalText] = originalText;
@@ -148,34 +148,47 @@ function replaceLanguageSwitch(sclassName) {
 
   if (kentaHeaderButton.length > 0) {
     for (let i = 0; i < kentaHeaderButton.length; i++) {
-      const bootstrapDropdown = `<div class="dropdown">
-          <a class="dropdown-toggle" type="button" id="LanguageDropdownMenuButton${i}" data-bs-toggle="dropdown" aria-expanded="false">
-              ${nowText} 
-          </a>
+      const bootstrapDropdown = `<span class="dropdown languageMenu">
+          <div class="dropdown-toggle" id="LanguageDropdownMenuButton${i}" aria-expanded="false">
+              ${nowText}
+          </div>
           <ul class="dropdown-menu LanguageDropdown-menu" aria-labelledby="LanguageDropdownMenuButton${i}">
           </ul>
-      </div>`;
+      </span>`;
       kentaHeaderButton[i].outerHTML = bootstrapDropdown;
     }
 
     const dropdownMenu = document.querySelectorAll('.LanguageDropdown-menu');
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle'); // Define dropdownToggles here
     const currentPath = window.location.pathname;
 
     // Remove the current language code from the path
     const pathSegments = currentPath.split('/');
-    pathSegments[1] = ''; // Clear the language code segment
-
+    if (languageCode != "en")
+      pathSegments[1] = ''; // Clear the language code segment
+    
     for (let i = 0; i < dropdownMenu.length; i++) {
       languageOptions.forEach(([name, langCode]) => {
         const listItem = document.createElement('li');
         const link = document.createElement('a');
         link.classList.add('dropdown-item');
-		link.classList.add('language-switch-item');
+        link.classList.add('language-switch-item');
+        link.setAttribute('style', 'color: #ffffff !important;');
+
         // Construct the URL based on the current path
+        // 
         if (langCode === 'en') {
-          link.href = `${pathSegments.slice(1).join('/')}`; // For English, no language code
+          // For English, we create a link without the language code
+          link.href =  `${pathSegments.slice(1).join('/')}` ; // Remove the first segment (language code)
         } else {
-          link.href = `/${langCode}/${pathSegments.slice(2).join('/')}`; // Add language code
+          // For other languages, prepend the language code to the existing path
+		let path = pathSegments.slice(1).join('/');
+		if (!langCode.endsWith('/') && !path.startsWith('/')) {
+			path = '/' + path;
+		}
+
+		const finalPath = `/${langCode}${path}`;
+          link.href = finalPath; // Keep all segments after the root
         }
 
         link.textContent = name;
@@ -184,24 +197,8 @@ function replaceLanguageSwitch(sclassName) {
       });
     }
 
-    // Add event listener to toggle the dropdown
-    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
-    dropdownToggles.forEach((toggle, index) => {
-      toggle.addEventListener('click', function() {
-        const menu = dropdownMenu[index];
-        menu.classList.toggle('show'); // Toggle the 'show' class
-      });
-    });
+    // Add event listener for hover to toggle the dropdown
 
-    // Close the dropdown if clicked outside
-    window.addEventListener('click', function(event) {
-      dropdownToggles.forEach((toggle, index) => {
-        const menu = dropdownMenu[index];
-        if (!toggle.contains(event.target) && !menu.contains(event.target)) {
-          menu.classList.remove('show'); // Hide the dropdown
-        }
-      });
-    });
   }
 }
 
@@ -245,3 +242,23 @@ function updateLinksToLanguageVersion() {
 // Call the function as needed
 setInterval(updateLinksToLanguageVersion, 1000); // 1000 milliseconds = 1 second
 
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  const languageMenu = document.querySelector('.languageMenu');
+  const dropdownMenu = document.querySelector('.LanguageDropdown-menu');
+
+  if (languageMenu && dropdownMenu) { // Check if elements exist
+    languageMenu.addEventListener('click', function (event) {
+      event.stopPropagation(); // Prevent event from bubbling up
+      dropdownMenu.classList.toggle('active'); // Toggle the dropdown
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function () {
+      if (dropdownMenu.classList.contains('active')) {
+        dropdownMenu.classList.remove('active');
+      }
+    });
+  }
+});
