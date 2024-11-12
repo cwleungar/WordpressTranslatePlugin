@@ -211,30 +211,59 @@ function my_plugin_translation_file_page($file_path) {
     $data = json_decode($json_data, true) ?: [];
 
     // Handle form submission
-    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $data = $_POST['data'] ?? [];
-        $value_data = $_POST['value'] ?? [];
-        
-        // Prepare the data for saving
-        $new_data = [];
-        foreach ($data as $key) {
-            if (!empty($key)) {
-                $new_data[$key] = $value_data[$key] ?? ''; // Link keys to their values
-            }
-        }
+   if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+$data = $_POST['data'] ?? [];
+$value_data = $_POST['value'] ?? [];
 
-        // Write updated data back to the JSON file
-        if (file_put_contents($file_path, json_encode($new_data, JSON_PRETTY_PRINT)) === false) {
-            echo '<div class="error"><p>Error saving settings. Please check file permissions.</p></div>';
-        } else {
-            echo '<script>alert("Settings saved successfully."); setTimeout(function() { window.location.reload(); }, 500);</script>';
-			
-        }
+
+		// Prepare the data for saving
+		$new_data = [];
+		foreach ($data as $key => $value) {
+    if (!empty($key)) {
+        // Replace characters in the value
+
+        $value_data[$key] = str_replace(
+            ['\\n','\\\'', "\\\"",'"', "'",'\\\\' ],
+            [ '\n','‘', '“','“', '‘','\\'],
+            $value_data[$key] ?? ''
+        );
+		$value=str_replace(
+            ['\\n','\\\'', "\\\"",'"', "'",'\\\\' ],
+            [ '\n','‘', '“','“', '‘','\\'],
+            $value ?? ''
+        );
+
+
+        $script_value = json_encode($value_data[$key]);
+        echo "<script>console.log($script_value);</script>";
+        // Link keys to their values
+        $new_data[$value] = $value_data[$key] ?? '';
     }
+}
+	
+
+		$json_data = json_encode($new_data);
+
+		
+		// Add console log for checking the data
+
+
+				// Write updated data back to the JSON file
+		if (file_put_contents($file_path, json_encode($new_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))=== false) {
+			echo '<div class="error"><p>Error saving settings. Please check file permissions.</p></div>';
+		} else {
+			echo '<script>alert("Settings saved successfully."); setTimeout(function() { window.location.reload(); }, 500);</script>';
+		}
+		
+	}
+
+    // Sort the data by key
+    ksort($data);
 
     // Display the form
     ?>
     <h2><?php echo esc_html(ucfirst(basename($file_path, '.json'))); ?></h2>
+    <input type="text" id="search" placeholder="Search..." />
     <form method="post" id="translation-form">
         <table class="form-table" id="translation-table">
             <thead>
@@ -249,35 +278,49 @@ function my_plugin_translation_file_page($file_path) {
                 <tr>
                     <td><input readonly type="text" name="data[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($key); ?>" /></td>
                     <td><input type="text" name="value[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" /></td>
-<!--                   <td><button type="button" class="remove-row button">Remove</button></td>  -->
+                    <td><button type="button" class="remove-row button">Remove</button></td>
                 </tr>
                 <?php endforeach; ?>
+
+                <!-- Placeholder for new rows will be added dynamically -->
             </tbody>
         </table>
-<!--          <button type="button" id="add-row" class="button">Add Key-Value Pair</button>   -->
+        <button type="button" id="add-row" class="button">Add Key-Value Pair</button>
         <input type="submit" value="Save Changes" class="button button-primary" />
     </form>
 
     <script>
-//         document.getElementById('add-row').addEventListener('click', function() {
-//             var table = document.getElementById('translation-table').getElementsByTagName('tbody')[0];
-//             var newRow = table.insertRow();
-//             var cell1 = newRow.insertCell(0);
-//             var cell2 = newRow.insertCell(1);
-//             var cell3 = newRow.insertCell(2);
-            
-//             // Create input fields for user-defined keys
-//             cell1.innerHTML = '<input type="text" name="data[new_key]" placeholder="Enter key" value="" />';
-//             cell2.innerHTML = '<input type="text" name="value[new_key]" placeholder="Enter value" value="" />';
-//             cell3.innerHTML = '<button type="button" class="remove-row button">Remove</button>';
-//         });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add new row
+        document.getElementById('add-row').addEventListener('click', function() {
+            const tableBody = document.querySelector('#translation-table tbody');
+            const newRow = document.createElement('tr');
+            // Use unique identifiers for new key-value pairs
+            newRow.innerHTML = `
+                <td><input type="text" name="data[new_key_${Date.now()}]" placeholder="New Key" /></td>
+                <td><input type="text" name="value[new_key_${Date.now()}]" placeholder="New Value" /></td>
+                <td><button type="button" class="remove-row button">Remove</button></td>
+            `;
+            tableBody.appendChild(newRow);
+        });
 
-//         document.getElementById('translation-table').addEventListener('click', function(e) {
-//             if (e.target.classList.contains('remove-row')) {
-//                 var row = e.target.closest('tr');
-//                 row.parentNode.removeChild(row);
-//             }
-//         });
+        // Remove row
+        document.querySelector('#translation-table').addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-row')) {
+                e.target.closest('tr').remove();
+            }
+        });
+
+        // Search functionality
+        document.getElementById('search').addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#translation-table tbody tr');
+            rows.forEach(row => {
+                const keyCell = row.querySelector('td input[type="text"]').value.toLowerCase();
+                row.style.display = keyCell.includes(query) ? '' : 'none';
+            });
+        });
+    });
     </script>
     <?php
 }

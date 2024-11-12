@@ -36,11 +36,17 @@ function applyTranslations() {
   }
 
   canonicalUrl.pathname = pathSegments.join('/').replace(/\/{2,}/g, '/'); // Clean up any double slashes
+	const tcanonicalUrl = window.location.href.split("?")[0].toString();
+	let existingLink = document.querySelector("link[rel='canonical']");
 
-  const canonicalLink = document.createElement('link');
-  canonicalLink.rel = 'canonical';
-  canonicalLink.href = canonicalUrl.toString();
-  document.head.appendChild(canonicalLink);
+	if (existingLink) {
+		existingLink.parentNode.removeChild(existingLink); // Remove the existing link
+	}
+
+	const canonicalLink = document.createElement('link');
+	canonicalLink.rel = 'canonical';
+	canonicalLink.href = tcanonicalUrl;
+	document.head.appendChild(canonicalLink); // Append the new link
 
   // Create alternate links based on hrefLangCode
   Object.entries(hrefLangCode).forEach(([lang, codes]) => {
@@ -106,26 +112,31 @@ function translateNode(node, translations) {
 
   if (translations[originalText] !== undefined) {
     let translatedText = translations[originalText];
-    const variables = originalText.match(/\$\d+/g);
+     const variables = originalText.match(/\$\d+/g);
 
-    if (variables) {
-      const temp = originalText.split(';');
-      variables.forEach((variable, index) => {
-        const value = temp[index + 1]?.trim();
-        if (value) {
-          translatedText = translatedText.replace(variable, value);
-        }
-      });
-    }
+     if (variables) {
+       const temp = originalText.split(';');
+       variables.forEach((variable, index) => {
+         const value = temp[index + 1]?.trim();
+         if (value) {
+           translatedText = translatedText.replace(variable, value);
+         }
+       });
+     }
 
     // Replace newlines with a space or another preferred character
     translatedText = translatedText.replace(/\r?\n/g, ' ');
+	let isFound = translatedText.includes("\\n");
 
-    if (node.nodeName !== 'INPUT') {
-      node.textContent = translatedText; // Update text node directly
-    } else {
-      node.value = translatedText; // Update input value directly
-    }
+		if (isFound) {
+			translatedText = translatedText.replace(/\\n/g, '\n');
+		}
+	if (node.nodeName !== 'INPUT') {
+	  node.textContent = translatedText; // Update text node directly
+	  if(isFound) node.parentNode.style.whiteSpace= 'pre-wrap';
+	} else {
+	  node.value = translatedText; // Update input value directly
+	}
   } else {
     undefinedTranslation[originalText] = originalText;
   }
